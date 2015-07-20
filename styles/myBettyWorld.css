@@ -1,0 +1,278 @@
+
+
+
+html, body {
+	height: 100%;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+	background-color: #1a2a41;
+	position: relative;
+}
+#mainWrap{
+	position: absolute;
+	top: 0px;
+	width: 100%;
+	height: 100%;
+	bottom: 0px;
+    min-height: 400px;
+    min-width: 600px;
+    font-family: 'Play', sans-serif;
+}
+
+#map{
+	height: 100%;
+	width: 100%;
+}
+
+div.ol-overlaycontainer-stopevent{
+    position: relative;
+    top: -100%;
+    heigth: 100%;
+}
+
+#center{
+	top: 60px;
+	bottom: 35px;
+	position: absolute;
+	width: 100%
+}
+
+header, footer{
+	height: 35px;
+	width: 100%;
+	position: absolute;
+}
+
+footer{
+	bottom: 0px;
+    color: white;
+}
+
+header{
+	top: 0px;
+    height: 60px;
+    color: white;
+}
+
+#title-container{
+    display: inline-block;
+    height: 100%;
+    width: 25%;
+    text-align: center;
+    vertical-align: auto;
+    padding: 0px;
+    float: left;
+}
+
+li{
+    list-style: none;
+}
+
+.navbar{
+    display: inline-block;
+    margin: 0px;
+    padding: 0px;
+    height: 100%;
+    font-size: 0px;
+}
+
+#topnavbar{
+    float: right;
+}
+
+.navbar li{
+    display: inline-block;
+    font-size: 1em;
+    height: 100%;
+}
+
+.mainbutton {
+    height: 100%;
+    min-width: 40px;
+}
+
+a{
+    border-radius: inherit;
+    
+    cursor: pointer;
+    transition: background-color 0.25s;
+    transition: color 0.25s;
+    border: 0;
+    text-align: center;
+    color: inherit;
+    
+}
+
+#topnavbar a{
+    background-color: inherit;
+}
+
+div#tabs #topnavbar li a:hover{
+    color: #80b5ff;
+}
+
+a:focus{
+    outline: 0;
+}
+#topnavbar a:active{
+    background-color: #1a2a41;
+}
+.navbar a{
+    height: 100%;
+    width: 60px; 
+    display: inline-block;
+    font-size: initial;
+}
+
+li p{
+    margin: 0px;
+}
+
+.navbar a i{
+   position: relative;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.vertical-center{
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+#lownavbar li:hover{
+    color: #80b5ff;
+}
+#lownavbar a:active{
+    background-color: #2E4762;
+}
+#lownavbar a{
+    width: 35px;
+}
+
+#controls{
+    background-color: #475e89;
+    float: right;
+    width: 240px;
+    position: relative;
+    z-index: 1;
+}
+
+#tabs{
+      float: right;
+  display: inline-block;
+  height: 100%;
+  width: 240px;
+  z-index: 1;
+  color: white;
+}
+
+input.hidden{
+    position: absolute;
+    left: -9999px;
+    display: none;
+}
+
+label{
+    cursor: pointer;
+}
+
+/******************override ugly as fuck jquery ui css***********************/
+
+body header div#tabs.ui-tabs {
+    background: inherit;
+    border: 0px;
+    color:inherit;
+    font-family: inherit;
+    font-size: inherit;
+    padding: 0px;
+    border-radius: 0px;
+}
+
+
+header div#tabs ul.navbar.ui-tabs-nav{
+    border: 0px;
+    background: inherit;
+    color: inherit;
+    font-weight: inherit;
+    border-radius: 0px;
+    font-size: 0;
+    padding: 0px;
+}
+
+header div#tabs ul.navbar li{
+    margin: 0px;
+    float: none;
+    font-size: 1em;
+    height: 100%;
+    width: 60px;
+    border: 0px;
+    border-radius: 0px;
+    color: inherit;
+    background: #1A2A41;
+}
+
+header div#tabs ul.navbar a{
+    padding: 0px;
+    color: inherit;
+    font-weight: initial;
+}
+
+header div#tabs ul.navbar li.ui-tabs-active{
+    background-color: #475e89;
+}
+
+div#tabs div.ui-tabs-panel{
+    color: white;
+    padding: 10px;
+}
+
+.table{
+    display: table;
+}
+
+.table-row{
+    display: table-row;
+}
+
+.table-cell{
+    display: table-cell;
+}
+
+div.ui-tabs-panel label{
+    height: 40px;
+    width: 100%;
+    transition: color 0.25s;
+    transition: background-color 0.25s;
+}
+
+div.ui-tabs-panel > div{
+    width: 100%;
+    padding: 0;
+}
+
+.table p{
+    margin: 0px;
+}
+
+img.icon{
+    max-height: 25px;
+    max-width: 25px;
+}
+span.icon{
+    width: 40px;
+    text-align: center;
+}
+span.table-cell{
+    padding: 0px;
+    vertical-align: middle;
+}
+
+.chosen{
+    background-color: #2E4762;
+}
+
+label.table-row:hover{
+    color: #80b5ff;
+}
