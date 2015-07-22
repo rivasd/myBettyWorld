@@ -28,7 +28,7 @@ html, body {
 div.ol-overlaycontainer-stopevent{
     position: relative;
     top: -100%;
-    height: 100%;
+    height: 0px;
 }
 
 #center{
@@ -73,8 +73,8 @@ li{
     display: inline-block;
     margin: 0px;
     padding: 0px;
-    height: 100%;
     font-size: 0px;
+	height: 100%;
 }
 
 #topnavbar{
@@ -106,6 +106,7 @@ a{
 
 #topnavbar a{
     background-color: inherit;
+	height: 60px;
 }
 
 div#tabs #topnavbar li a:hover{
@@ -129,19 +130,13 @@ li p{
     margin: 0px;
 }
 
-.navbar a i{
-   position: relative;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
 .vertical-center{
     position: relative;
     top: 50%;
-    transform: translateY(-50%);
+    transform: translateY(-50%) !important;
 }
 
-#lownavbar li:hover{
+.navbar li:hover{
     color: #80b5ff;
 }
 #lownavbar a:active{
@@ -152,20 +147,33 @@ li p{
 }
 
 #controls{
-    background-color: #475e89;
-    float: right;
-    width: 240px;
-    position: relative;
-    z-index: 1;
+  background-color: #475e89;
+  min-width: 240px;
+  position: absolute;
+  z-index: 1;
+  right: 0px;
+  max-height: 100%;
+  overflow: auto;
+  max-width: 33%;
+  color: white;
+}
+
+#controls:empty{
+    display: none;
 }
 
 #tabs{
-      float: right;
+  float: right;
   display: inline-block;
-  height: 100%;
   width: 240px;
   z-index: 1;
   color: white;
+  position: absolute;
+  top: -60px;
+  background-color: rgb(26, 42, 65);
+  right: 0px;
+  max-height: calc(100% + 60px);
+  overflow: visible;
 }
 
 input.hidden{
@@ -178,55 +186,7 @@ label{
     cursor: pointer;
 }
 
-/******************override ugly as fuck jquery ui css***********************/
-
-body header div#tabs.ui-tabs {
-    background: inherit;
-    border: 0px;
-    color:inherit;
-    font-family: inherit;
-    font-size: inherit;
-    padding: 0px;
-    border-radius: 0px;
-}
-
-
-header div#tabs ul.navbar.ui-tabs-nav{
-    border: 0px;
-    background: inherit;
-    color: inherit;
-    font-weight: inherit;
-    border-radius: 0px;
-    font-size: 0;
-    padding: 0px;
-}
-
-header div#tabs ul.navbar li{
-    margin: 0px;
-    float: none;
-    font-size: 1em;
-    height: 100%;
-    width: 60px;
-    border: 0px;
-    border-radius: 0px;
-    color: inherit;
-    background: #1A2A41;
-}
-
-header div#tabs ul.navbar a{
-    padding: 0px;
-    color: inherit;
-    font-weight: initial;
-}
-
-header div#tabs ul.navbar li.ui-tabs-active{
-    background-color: #475e89;
-}
-
-div#tabs div.ui-tabs-panel{
-    color: white;
-    padding: 10px;
-}
+/****************** css for pseudo-table layout  (I know :$ )***********************/
 
 .table{
     display: table;
@@ -238,6 +198,17 @@ div#tabs div.ui-tabs-panel{
 
 .table-cell{
     display: table-cell;
+}
+
+
+/**************************************  CSS for the editor  ************************************/
+
+.ui-tabs-active{
+    background-color: #475E89;
+}
+
+.ui-tabs-panel{
+    padding: 7px;
 }
 
 div.ui-tabs-panel label{
@@ -275,4 +246,16 @@ span.table-cell{
 
 label.table-row:hover{
     color: #80b5ff;
+}
+
+
+/****************************************  the data editor css   *****************************************************/
+.data-viewer{
+}
+
+.field-name{
+	text-align: left;
+	vertical-align: middle;
+	width: 20%;
+	font-size: smaller;
 }

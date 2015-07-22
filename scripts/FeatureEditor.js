@@ -25,7 +25,7 @@ function FeatureEditor(opts){
     //the layer that will hold everything we draw
     var workingLayer = opts.workingLayer || new ol.layer.Vector({
         source: new ol.source.Vector({
-            features: allFeatures
+        	features: allFeatures
         }),
         title: "workingLayer",
         style: new ol.style.Style({
@@ -79,7 +79,7 @@ function FeatureEditor(opts){
     //Our ol.interaction.Select through which we will edit our drawing
 
     var selectInteraction = new ol.interaction.Select({
-        layers: workingLayer,
+        layers: [workingLayer],
         title: "SelectInteraction"
     });
 
@@ -132,7 +132,7 @@ function FeatureEditor(opts){
     opts.map.addInteraction(selectInteraction);
 
     //add the layer to the map, we remove it first in case it was provided to us already linked to the map
-    opts.map.removeLayer(workingLayer);
+    //opts.map.removeLayer(workingLayer);
     opts.map.addLayer(workingLayer);
 
     //At this initialization step, ensure everything is turned off, and then let the caller take care of the rest!
@@ -162,11 +162,12 @@ function FeatureEditor(opts){
     *
     */
     editor.startDrawing = function draw() {
-        
-        mode = "draw";
-        var type = getType();
-        drawersHash[type].setActive(true);
-        logActiveInteractions();
+
+    	editor.stopEditing();
+    	mode = "draw";
+    	var type = getType();
+    	drawersHash[type].setActive(true);
+    	logActiveInteractions();
     };
 
     editor.stopDrawing = function stopdraw() {
@@ -177,15 +178,26 @@ function FeatureEditor(opts){
     };
 
     editor.startEditing = function startEditing() {
-        mode = "edit";
-        selectInteraction.setActive(true);
-        modifyInteraction.setActive(true);
+    	mode = "edit";
+    	selectInteraction.setActive(true);
+
+    	if (modifyInteraction != undefined) {
+    		modifyInteraction.setActive(true);
+    	}
+    	else {
+    		modifyInteraction = new ol.interaction.Modify({
+    			features: selectInteraction.getFeatures()
+    		});
+    		theMap.addInteraction(modifyInteraction);
+    	}
     }
 
     editor.stopEditing = function stopEditing() {
         mode = "off";
         selectInteraction.setActive(false);
         modifyInteraction.setActive(false);
+		//we must also flush both interaction of all the features they may still contain
+
     }
 
     return editor;
