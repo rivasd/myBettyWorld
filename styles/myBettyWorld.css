@@ -153,9 +153,10 @@ li p{
   z-index: 1;
   right: 0px;
   max-height: 100%;
-  overflow: auto;
-  max-width: 33%;
+  overflow-x: hidden;
+  max-width: 25%;
   color: white;
+  overflow-y: auto;
 }
 
 #controls:empty{
@@ -208,7 +209,7 @@ label{
 }
 
 .ui-tabs-panel{
-    padding: 7px;
+    
 }
 
 div.ui-tabs-panel label{
@@ -220,7 +221,8 @@ div.ui-tabs-panel label{
 
 div.ui-tabs-panel > div{
     width: 100%;
-    padding: 0;
+    padding: 10px;
+    font-size: 0.9em;
 }
 
 .table p{
@@ -251,11 +253,37 @@ label.table-row:hover{
 
 /****************************************  the data editor css   *****************************************************/
 .data-viewer{
+    position: relative;
+    width: 100%;
 }
 
 .field-name{
 	text-align: left;
 	vertical-align: middle;
-	width: 20%;
 	font-size: smaller;
+}
+
+.accepts-data{
+    width: 80%;
+}
+
+.switchable{
+    
+}
+
+#edit{
+    display: flex;
+    width: 200%;
+    height: 100%;
+    position: relative;
+}
+
+#controls ul{
+    margin:  0px;
+    padding: 0px;
+    list-style: none;
+}
+
+#edit-instructions li{
+    margin: 7px 0px;
 }

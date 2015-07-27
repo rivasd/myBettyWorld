@@ -19,6 +19,10 @@
         <!--<link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">-->
         <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
 
+        <!--FileSaver.js to allow download from client-side only-->
+        <script src="FileSaverJS/FileSaver.js"></script>
+
+
         <script src="scripts/UserControls.js"></script>
         <script src="scripts/FeatureEditor.js"></script>
 		<script src="scripts/global.js"></script>
@@ -39,21 +43,45 @@
 					),
 
 					"date" => array(
-						"values" => array("number")
+						"values" => array("text")
 					),
 
 					"région" => array(
 						"values" => array(
-							"Caribou", "Igloolik", "Ungava"
-						)
+							1, 2, 3, 4
+						),
+                        "map" => array(
+                            1 => "Caribou",
+                            2 => "Igloolik",
+                            3 => "Terre Neuve",
+                            4 => "Nunavut"
+                        )
 					),
 
 					"style" => array(
 						"values" => array(
-							"Jeu vocal", "Chant des enfants", "Chant de gorge"
+							1, 2, 3
 						),
+                        "map" => array(
+                            1 => "Jeu chanté",
+                            2 => "Jeu vocal",
+                            3 => "Chant des enfants"
+                        ),
 						"allowMultiple" => TRUE,
-					)
+					),
+
+                    "Polyphonies" => array(
+                        "values" => array(
+                            1, 2, 3, 4
+                        ),
+
+                        "map" => array(
+                            1 => "Induite",
+                            2 => "poly1",
+                            3 => "poly2",
+                            4 => "poly3"
+                        )
+                    )
 				
 				);
 				
@@ -76,7 +104,24 @@
 				
                     <div id="controls">
                         <div id="search">search</div>
-                        <div id="edit">edit</div>
+                        <div id="edit">
+                            <div id="edit-instructions" class="switchable">
+                                <ul>
+                                    <li>
+                                        Click on a point, line or polygon to select it. You can then change its shape with the mouse.
+                                    </li>
+                                    <li>
+                                        If you select a single feature, this panel will change to allow you to edit the data attached to the feature.
+                                    </li>
+                                    <li>
+                                        Shift-click to add to the current selection, and press delete to remove all selected features.
+                                    </li>
+                                </ul>
+                            </div>
+                            <div id="edit-interface" class="switchable">
+                            
+                            </div>
+                        </div>
                         <div id="draw">
                             <input class="hidden" type="radio" name="drawing" value="Point" id="PointSelector" checked/>
                             <input class="hidden" type="radio" name="drawing" value="Line" id="LineSelector"/>
@@ -113,21 +158,6 @@
                              </div>   
                              <p class="instructions">Hold the <span class="key">Shift</span> key to activate free draw!</p> 
 							<!--test html for the max-height feature-->
-							<br>
-							<br>
-							<br>
-							<br>
-							<br>
-							<br>
-							<br>
-							<br>
-							<br>
-							<br>
-							<br><br>
-							<br>
-							<br>
-							<br>
-							<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
                         </div>
                         <div id="opts">opts</div>
                     </div>
@@ -137,7 +167,7 @@
 			</div>
 			<footer>
                 <ul class="navbar" id="lownavbar">
-                    <li><a><i class="fa fa-download vertical-center"></i></a></li>
+                    <li><a id="saveCopy"><i class="fa fa-download vertical-center"></i></a></li>
                     <li><a><i class="fa fa-floppy-o vertical-center"></i></i></a></li>
                     <li><a><i class="fa fa-sign-out vertical-center"></i></a></li>
                 </ul>

@@ -11,8 +11,14 @@ function UserControls(opts){
 	//theDataEditor object controlled by this interface
     var dataEditor = opts.reader;
 
+    //id string of the target element for the ui
+    var editTarget = opts.editTarget
+
 	//JSON object sent by the server, contains most of the conf details
     var specification = JSON.parse(document.getElementById("server-data").innerHTML);
+
+    //the meta data object
+    var meta = opts.meta;
 
     //We start by enabling the tabular UI from jQuery on the element specified in the constructor
     $controls.tabs({
@@ -26,22 +32,28 @@ function UserControls(opts){
 
     $controls.on("tabsactivate", function (evt, ui) {
 
-    	featureEditor.turnOff();
+        featureEditor.turnOff();
 
-    	if (ui.newTab.length > 0) {
-    		//we just made a content appear, change the active tab to the activeColor
-    		if (ui.newTab.find("a[href=#draw]").length > 0) {
-    			featureEditor.startDrawing();
-    			$("#draw label").first().click();
-    		}
-    		else if (ui.newTab.find("a[href=#edit]")) {
-    			featureEditor.startEditing();
-    		}
-    	}
-    	if (ui.oldTab.length > 0) {
-    		//we just made a tab disappear, make sure its color is back to normal
+        if (ui.oldTab.length > 0) {
+            //we just made a tab disappear
+            if (ui.oldPanel.attr("id") == "edit") {
+                clearInputs();
+                featureEditor.stopEditing();
+                clearInputs();
+            }
+        }
 
-    	}
+        if (ui.newTab.length > 0) {
+            //we just made a content appear, change the active tab to the activeColor
+            if (ui.newTab.find("a[href=#draw]").length > 0) {
+                featureEditor.startDrawing();
+                $("#draw label.table-row").first().click();
+            }
+            else if (ui.newTab.find("a[href=#edit]")) {
+                featureEditor.startEditing();
+            }
+        }
+
     });
 
     function highlightChoice($radioSet, chosenClass){
@@ -52,6 +64,17 @@ function UserControls(opts){
     }
 
     highlightChoice($("div#draw label"), "chosen");
+
+
+    function showInputs(){
+        $("#edit").animate({ "left": "-100%" }, 200);
+    }
+
+    function showInstruct(){
+        $("#edit").animate({ "left": "0%" }, 200);
+    }
+
+
 
 	/**
 	*function that builds the correct UI for the data edition panel given a specification.
@@ -64,10 +87,10 @@ function UserControls(opts){
 	*
 	*@return	{jQuery}	a jQuery object that contains the div element holding the editor interface	 
 	*/
-	function buildDataUI(spec){
+	function buildDataUI(){
 		var editorUi = $("<div></div>", { class: "table data-viewer" });
 
-		console.log(spec);
+		var spec = meta;
 
 		//iterate through the keys in spec
 		for(field in spec){
@@ -86,7 +109,9 @@ function UserControls(opts){
 					var mockRow = $("<div></div>", { class: "table-row" });
 					editorUi.append(mockRow);
 
-					var fieldLabel = $("<span>" + field + "</span>", { class: "table-cell field-name" });
+					var fieldLabel = $("<span>" + field + "</span>");
+					fieldLabel.addClass("field-name");
+					fieldLabel.addClass("table-cell");
 					mockRow.append(fieldLabel);
 
 					var editable;
@@ -96,12 +121,12 @@ function UserControls(opts){
 						// we requested a list of possible values
 						var editable = $("<select></select>");
 						choices.forEach(function (elem) {
-							editable.append($("<option>" + elem + "</option>", { value: elem }));
+						    editable.append($("<option>" + spec[field].map[elem] + "</option>").attr("value", elem));
 						});
 
 						if(spec[field].allowMultiple){
 							editable.attr("multiple", "multiple");
-							editable.attr("size", 1);
+							editable.attr("size", 2);
 						}
 					}
 					else if( choices.length === 1){
@@ -114,19 +139,59 @@ function UserControls(opts){
 					}
 					editable.addClass("accepts-data");
 					mockRow.append(editable);
+
+                    //make a link between the meta-data object and the html element for write purpose
+					spec[field].inputElement = editable;
+
+                    //for read purposes, set the name equal to the field ** bug detected, fails when field name contains spaces, replace with hyphens, need to decode!!!!
+					editable.attr("name", field.replace(/\s+/g, "-"));
 				}
 			}
 		}
 
-		return editorUi;
+		$(editTarget).empty().append(editorUi);
 	}
+
+    //call this builder immediatly on object creation
+    buildDataUI()
+
+    function clearInputs(){
+        $(editTarget).find(".accepts-data").each(function (idx, elem) {
+            if (elem.type == "checkbox" || elem.type == "radio") {
+	            elem.checked = false;
+	        }
+	        else if (elem.tagName == "SELECT") {
+	            $(elem).val([]);
+	        }
+	        else {
+	            elem.value = "";
+	        }
+        });
+    }
+
+    /*********************************************** event listeners  *************************************/
+
+    featureEditor.getSelect().on("select", function (evt) {
+        //if there is one feature in selection, scroll to show the input
+        var selected = dataEditor.getSelect().getFeatures().getLength();
+
+        if (selected == 1) {
+            showInputs();
+        }
+        else {
+            showInstruct();
+            clearInputs();
+        }
+    });
+
+
+
 
 	/************************************  PUBLIC API   ***************************************/
 
-	interfaceControls.injectDataViewer = function (target) {
-		var holder = $(target);
-		holder.empty().append(buildDataUI(specification));
-	}
+    interfaceControls.rebuildUI = buildDataUI;
+    interfaceControls.showInstructs = showInstruct;
+    interfaceControls.showInputs = showInputs;
 
     return interfaceControls;
 }
