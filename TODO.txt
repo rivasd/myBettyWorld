@@ -1,3 +1,4 @@
 DONE current build does not support field names to contain spaces.
 -   replace the input fields by instruction when not selecting exactly one feature
 -	Beware of the writer writing NULL when saving empty <select> inputs. the array will no longer have length 0
+-   OBVIOUSLY THE SECURITY CLASS

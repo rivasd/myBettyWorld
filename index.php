@@ -14,7 +14,7 @@
         <link href='http://fonts.googleapis.com/css?family=Play' rel='stylesheet' type='text/css'>
 
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
-		<script src="http://openlayers.org/en/v3.7.0/build/ol-debug.js" type="text/javascript"></script>
+		<script src="http://openlayers.org/en/v3.8.2/build/ol-debug.js" type="text/javascript"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.3.6/proj4.js"></script>
         <!--<link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">-->
         <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
