@@ -28,7 +28,7 @@ function UserControls(opts){
     });
 
     //Extract all the clickable tabs from the id
-    var $tabs = $controls.find("ul a");
+    var $tabs = $controls.find("ul.navbar a");
 
     $controls.on("tabsactivate", function (evt, ui) {
 
@@ -53,7 +53,6 @@ function UserControls(opts){
                 featureEditor.startEditing();
             }
         }
-
     });
 
     function highlightChoice($radioSet, chosenClass){
@@ -98,57 +97,52 @@ function UserControls(opts){
 				//the server will set some properties as uneditable, skip them
 				//this only prevents them from appearing in the ui, the real protection must of course be implemented server-side
 				//by the class responsible for writing to the databse
-				if(spec[field].invisible){
+				if(spec[field].invisible || field == 'timestamp'){
 					continue;
 				}
 				//check that an array was passed as a value
-				if(!Array.isArray(spec[field].values)){
-					throw "could not build editor UI, no array of possible values for this field!";
+				
+				var mockRow = $("<div></div>", { class: "table-row" });
+				editorUi.append(mockRow);
+
+				var fieldLabel = $("<span>" + field + "</span>");
+				fieldLabel.addClass("field-name");
+				fieldLabel.addClass("table-cell");
+				mockRow.append(fieldLabel);
+
+				var editable;
+				var choices = spec[field].values;
+
+				if(Array.isArray(choices)){
+					// we requested a list of possible values
+					var editable = $("<select></select>");
+					choices.forEach(function (elem) {
+						editable.append($("<option>" + spec[field].map[elem] + "</option>").attr("value", elem));
+					});
+
+					if(spec[field].allowMultiple){
+						editable.attr("multiple", "multiple");
+						editable.attr("size", 2);
+					}
 				}
 				else{
-					var mockRow = $("<div></div>", { class: "table-row" });
-					editorUi.append(mockRow);
-
-					var fieldLabel = $("<span>" + field + "</span>");
-					fieldLabel.addClass("field-name");
-					fieldLabel.addClass("table-cell");
-					mockRow.append(fieldLabel);
-
-					var editable;
-					var choices = spec[field].values;
-
-					if(choices.length > 1){
-						// we requested a list of possible values
-						var editable = $("<select></select>");
-						choices.forEach(function (elem) {
-						    editable.append($("<option>" + spec[field].map[elem] + "</option>").attr("value", elem));
-						});
-
-						if(spec[field].allowMultiple){
-							editable.attr("multiple", "multiple");
-							editable.attr("size", 2);
-						}
-					}
-					else if( choices.length === 1){
-						// we left the user free to write whatever value, but it should conform to the specified "type"
-						var type = choices[0];
-						editable = $("<input></input>", { "type": type, class: "input-text "+"ensure-"+type });
-					}
-					else{
-						throw "spec[field].values array is empty for this field...";
-					}
-					editable.addClass("accepts-data");
-					mockRow.append(editable);
-
-                    //make a link between the meta-data object and the html element for write purpose
-					spec[field].inputElement = editable;
-
-                    //for read purposes, set the name equal to the field ** bug detected, fails when field name contains spaces, replace with hyphens, need to decode!!!!
-					editable.attr("name", field.replace(/\s+/g, "-"));
+					// we left the user free to write whatever value, but it should conform to the specified "type"
+					var type = choices;
+					editable = $("<input></input>", { "type": type, class: "input-text "+"ensure-"+type });
 				}
+					
+				editable.addClass("accepts-data");
+				mockRow.append(editable);
+
+                //make a link between the meta-data object and the html element for write purpose
+				spec[field].inputElement = editable;
+
+                //for read purposes, set the name equal to the field ** bug detected, fails when field name contains spaces, replace with hyphens, need to decode!!!!
+				editable.attr("name", field.replace(/\s+/g, "-"));
+				
 			}
 		}
-
+		console.log(editorUi);
 		$(editTarget).empty().append(editorUi);
 	}
 
@@ -192,6 +186,13 @@ function UserControls(opts){
     interfaceControls.rebuildUI = buildDataUI;
     interfaceControls.showInstructs = showInstruct;
     interfaceControls.showInputs = showInputs;
+
+    interfaceControls.closeEdit = function () {
+        var editor = $("#edit");
+        if (editor.is(":visible")) {
+            $tabs.filter("a[href=#edit]").trigger("click");
+        }
+    }
 
     return interfaceControls;
 }

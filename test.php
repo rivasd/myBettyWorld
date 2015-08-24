@@ -27,7 +27,7 @@ $connection = new myBettyConnector($opts);
     <body>
         <?php 
             
-            echo $connection->getTestMeta();
+            echo $connection->load();
         
         ?>
     </body>

@@ -18,6 +18,11 @@ class SecurityManager {
     public function isLoggedIn(){
         return TRUE;
     }
+
+    public function getUserId(){
+        //implement later
+        return 0;
+    }
 }
 
 

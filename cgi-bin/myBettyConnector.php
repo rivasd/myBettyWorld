@@ -8,12 +8,15 @@
 
 	class LoginFailure extends Exception {}
 	class DatabaseError extends Exception {}
-
+    require_once "SecurityManager.php";
 
 class myBettyConnector {
 
 	//the MySQL database name to be used
 	protected $database;
+
+    //the security manager for this instance
+    protected $secManager;
 
 	//the hostname, username, and password to use
 	protected $username;
@@ -24,8 +27,8 @@ class myBettyConnector {
 	protected $masterTable;
 
 	//MySQL columns used internally only, not to be returned to the client
-	protected $internals = array("version", "owner", "removed");
-
+	protected $internals = array("version", "owner", "removed", "id", "creator", "geometry", "timestamp", "coordinates");
+    protected $mustHave = array("Piste");
     //things that will never need to be written to the database (ie info that will never come from the client but will be set completely client side)
     //If a mistake is made here the insert and update operation will ask for a value that wont come from the client, and an error will occur (not all handles will be bound on the prepared PDO statement)
     protected $unwritables;
@@ -48,8 +51,8 @@ class myBettyConnector {
 
 	function __construct($opts){
 		//start off by checking if the user is logged in
-		$secure = new SecurityManager();
-		if(!$secure->isLoggedIn()){
+		$this->secManager = new SecurityManager();
+		if(!$this->secManager->isLoggedIn()){
 			throw new LoginFailure("Tried to create a server connection from a un-authenticated session. REFUSED.");
 		}
 		$this->database = $opts["database"];
@@ -109,7 +112,7 @@ class myBettyConnector {
 	*/
 	function getForeignColumns(){
 		
-        echo "call to getForeignColumns";
+        //echo "call to getForeignColumns";
         //var_dump($this->db);
 
 		$columns = $this->db->query("select `column_name`, `referenced_table_name`, `referenced_column_name` from information_schema.KEY_COLUMN_USAGE where `table_schema` = DATABASE() and `table_name` = \"".$this->masterTable."\" and `referenced_table_name` is not null");
@@ -178,10 +181,10 @@ class myBettyConnector {
         $values = "(";
         $binders = array();
 
-        echo $this->unwritables;
+        //echo $this->unwritables;
         foreach($this->metadata as $entry => $data){
 
-            var_dump($entry);
+            //var_dump($entry);
 
             if(!in_array($entry, $this->unwritables)){
                 $columns .= $entry.", ";
@@ -200,7 +203,7 @@ class myBettyConnector {
         //echo $query
 
         $stmt = $this->db->prepare($query);
-        $stmt->bindValue(":creator", 0, PDO::PARAM_INT);
+        $stmt->bindValue(":creator", $this->secManager->getUserID(), PDO::PARAM_INT);
         $statementData = array();
         $statementData['insertstmt'] = $stmt;
         $statementData['bindarray'] = $binders;
@@ -234,8 +237,10 @@ class myBettyConnector {
         foreach($binders as $name => $link){
             $stmt->bindParam(":".$name, $link, $this->getPDOTypeFromMeta($name));
         }
-
-        echo $query;
+        //debug statement
+        //echo $query;
+        //var_dump($stmt);
+        
 
         return array(
             'updatestmt' => $stmt,
@@ -259,7 +264,7 @@ class myBettyConnector {
 		$updateLink = $this->createUpdateStatement();
 
 		//we will start by checking the data correctness as well as we can, and proceed only if no errors are found
-		$featureCollection = json_decode($featureCollection);
+		$featureCollection = $featureCollection->features; 
 
 		foreach($featureCollection as $feature){
 			$possibleError = $this->checkSingleFeat($feature);
@@ -273,7 +278,7 @@ class myBettyConnector {
 			return $errorMsg;
 		}
 		else{ //no errors found
-            echo "\n\n We are now at the writing stage, errors should be cleared";
+            //echo "\n\n We are now at the writing stage, errors should be cleared";
 			foreach($featureCollection as $checkedFeat){
 				//I know we should not have insert errors if the checking code was good, but hey you never know
 				//so use a try block to catch all pdo exceptions 
@@ -285,13 +290,17 @@ class myBettyConnector {
 				//	}
 				//}
 
+                //debug statement
+                //echo "Trying to sync this feat: ";
+                //var_dump($checkedFeat->properties->isNew);
+
 				try{
 					if($checkedFeat->properties->isNew == TRUE && !isset($checkedFeat->properties->id)){
 						//this is an INSERT
 
                         //debug statement
-                        echo "<br> now trying for an insert!";
-                        var_dump($insertLink['insertstmt']);
+                        //echo "now trying for an insert?";
+                        //var_dump($checkedFeat);
 
 
 						//1.bind all the params in the $insertLink->binders array
@@ -303,17 +312,23 @@ class myBettyConnector {
 
                                 $checkedFeat->properties->$name = $datapiece[0];
                             }
+                            //debug statement
+                            //var_dump($checkedFeat->properties->$name);
 
-                            var_dump($checkedFeat->properties->$name);
+                            if($checkedFeat->properties->$name == ""){
+                                $checkedFeat->properties->$name = NULL;
+                            }
 							$insertLink['insertstmt']->bindValue(":".$name, $checkedFeat->properties->$name, $this->getPDOTypeFromMeta($name));
 						}
 
-                        var_dump($insertLink['bindarray']);
-                        $insertLink['insertstmt']->bindValue(":coordinate", json_encode($checkedFeat->geometry->coordinate));
+                        //debug statement
+                        //var_dump($insertLink['insertstmt']);
+
+                        //$insertLink['insertstmt']->bindValue(":coordinate", json_encode($checkedFeat->geometry->coordinate));
                         $insertLink['insertstmt']->bindValue(":coordinates", json_encode($checkedFeat->geometry->coordinates));
                         //debug statement
-                        //$insertLink['insertstmt']->bindValue(":Disque", 1, PDO::PARAM_INT);
-
+                        $insertLink['insertstmt']->bindValue(":creator", $this->secManager->getUserId(), PDO::PARAM_INT);
+                        $insertLink['insertstmt']->bindValue(":geometry", array_search($checkedFeat->geometry->type, $this->metadata['geometry']['map']), PDO::PARAM_INT);
 						//2.then execute the statement
 						$insertLink['insertstmt']->execute();
 						//3.profit?
@@ -322,13 +337,14 @@ class myBettyConnector {
 					elseif($checkedFeat->properties->isNew == FALSE &&  isset($checkedFeat->properties->id)){
 						//this is an UPDATE
                         //debug statement
-                        echo "<br> trying for an update!";
+                        //echo "<br> trying for an update!";
 
 
 						foreach($updateLink['bindarray'] as $name => $uplink){
 
                             //debug statement
-                            echo "<br><br>we are binding: ".$name;
+                            //var_dump($name);
+                            //echo "<br><br>we are binding: ".$name;
 
 							$uplink = $checkedFeat->properties->$name;
                             if(gettype($uplink) == 'array'){
@@ -338,14 +354,15 @@ class myBettyConnector {
                             $updateLink['updatestmt']->bindValue(":".$name, $checkedFeat->properties->$name, $this->getPDOTypeFromMeta($name));
 						}
                         //debug statement
-                        var_dump($checkedFeat->properties);
-
+                        //var_dump($checkedFeat->properties);
+                        //var_dump($updatetLink['updatestmt']);
 
                         //dont forget to bind the id!
                         $updateLink['updatestmt']->bindValue(":id", $checkedFeat->properties->id, PDO::PARAM_INT);
                         //since the coordinates do not belong to the properties subobject, add them manually
-                        $updateLink['updatestmt']->bindValue(":coordinate", json_encode($checkedFeat->geometry->coordinate));
-                        $updateLink['updatestmt']->bindValue(":coordinates", json_encode($checkedFeat->geometry->coordinates));
+                        //$updateLink['updatestmt']->bindValue(":coordinate", json_encode($checkedFeat->geometry->coordinate));
+                        $updateLink['updatestmt']->bindValue(":coordinates", json_encode($checkedFeat->geometry->coordinates), PDO::PARAM_STR);
+                        $updateLink['updatestmt']->bindValue(":geometry", array_search($checkedFeat->geometry->type, $this->metadata['geometry']['map']), PDO::PARAM_INT);
                         //$updateLink['updatestmt']->debugDumpParams();
 						$updateLink['updatestmt']->execute();
 					}
@@ -375,7 +392,7 @@ class myBettyConnector {
         }
 
         //debug statement
-        var_dump($foreigns);
+        //var_dump($foreigns);
 
         foreach($this->meta as $field){
             $metaEntry = array();
@@ -446,12 +463,12 @@ class myBettyConnector {
         $metadata["timestamp"] = time();
 
         //insert the newly created meta JSON string into the 
-        $temp = fopen("tmp/meta.txt", "w");
+        $temp = fopen("../tmp/meta.txt", "w");
         fwrite($temp, json_encode($metadata));
 
 
         //debug statement
-        var_dump($metadata);
+        //var_dump($metadata);
         return $metadata;
     }
 
@@ -466,7 +483,7 @@ class myBettyConnector {
     */
     function checkSingleFeat ($feat){
 
-        echo "\n Preparing to check feature: \n\n";
+        //echo "\n Preparing to check feature: \n\n";
 
         $meta = $this->metadata;
 
@@ -474,7 +491,8 @@ class myBettyConnector {
         $errorString = '';
 
 
-
+        //debug statement
+        //var_dump($feat);
 
         //get the right geometry secondary to write in the master table
         $givenGeometryType = $featObject->geometry->type;
@@ -497,12 +515,15 @@ class myBettyConnector {
                 }
 
                 //debug statement
-                echo "Validating the field ".$property." of the current feature";
-                echo "this is its value";
-                var_dump($value);
+                //echo "Validating the field ".$property." of the current feature";
+                //echo "this is its value";
+                //var_dump($value);
 
-                if(!isset($meta[$property])){
+                if(!isset($meta[$property]) && $property != "touched"){
                     $errorString .= "The property: ".$property." is not among the fields in the database\n";
+                }
+                elseif($value == "" || $value == NULL || $value[0] == NULL){
+                    //this field was simply not filled. if it was obligatory, set an error here
                 }
                 elseif(!isset($meta[$property]["map"])){
                     //we expect literal values, but first check that the type of the value sent corresponds to the MySQL type of the column
@@ -522,7 +543,7 @@ class myBettyConnector {
                         }
                     }
                     else{
-                        if(!$meta[$property]["acceptsNull"]){
+                        if(!$meta[$property]["acceptsNull"] && !in_array($property, $this->unwritables)){
                             $errorString .= "The field ".$property." does not accept NULL values";
                         }
                     }
@@ -531,7 +552,7 @@ class myBettyConnector {
                     if(gettype($value) == 'array'){
 
                         //debug statement
-                        echo "we should never see this as long as the program does not support multiple values per field";
+                        //echo "we should never see this as long as the program does not support multiple values per field";
 
                         foreach($value as $fkey){
                             if(array_search($fkey, $meta[$property]['values']) === FALSE){
@@ -558,9 +579,109 @@ class myBettyConnector {
     *
     *
     */
-    function getAllAsJSON(){
-        
+    function getAllData(){
+
+        $skip = array("removed", 'geometry', "coordinate", "coordinates");
+
+        $GeoJSON = array();
+        $GeoJSON['type'] = 'FeatureCollection';
+        $features = array();
+
+        //perform a hideous query to get all the info
+        $dataStmt = $this->db->query("SELECT * FROM ".$this->masterTable." WHERE removed=0");
+        $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach($data as $row){
+
+            //debug statement
+            //var_dump($row);
+
+            $geoObject = array();
+            $geoObject['type'] = "Feature";
+            $geometry = array();
+
+            //debug statement
+            //var_dump($this->metadata['geometry']['map']);
+
+            $geometry['type'] = $this->metadata['geometry']['map'][$row['geometry']];
+            if($row['coordinate'] != NULL){
+                $geometry['coordinate'] = json_decode($row['coordinates']);
+            }
+            elseif($row['coordinates'] !=NULL){
+                $geometry['coordinates'] = json_decode($row['coordinates']);
+            }
+
+            $geoObject['geometry'] = $geometry;
+
+            $properties = array();
+            foreach($row as $field => $val){
+                if(!in_array($field, $skip)){
+                    if($this->metadata[$field]['type'] == 'int'){
+                        $val = intval($val);
+                    }
+                    if(isset($this->metadata[$field]['map'])){
+                        //we need to convert the value to a singleton array
+                        $val = array(intval($val));
+                    }
+                    
+                    $properties[$field] = $val;
+                }
+            }
+            $properties['isNew'] = FALSE;
+            $geoObject['properties'] = $properties;
+            //COMPLETE WITH many-to-many TABLES IN THE FUTURE (get the keys from relationship tables)
+
+            array_push($features, $geoObject);
+        }
+
+        $GeoJSON['features'] = $features;
+
+        return $GeoJSON;
     }
+
+    function fillInCoordinates($dataobject){
+        $citydata = $this->db->query("SELECT * FROM villes");
+        $citydata = $citydata->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach($dataobject['features'] as $index => $point){
+            $id = $point['properties']['Ville'][0];
+            //echo $id;
+            $coordinateString ='';
+            foreach($citydata as $cityrow){
+                if($cityrow['id'] == $id){
+                    $coordinateString = $cityrow['coordonnees'];
+                }
+            }
+
+            //debug statement
+            // echo " <br>found the coordinates";
+            
+            $coordarray =explode(", ", $coordinateString);
+
+            (float) $coordarray[0];
+            //echo "<br>".$coordarray[0];
+            (float) $coordarray[1];
+            //echo "<br>".$coordarray[1];
+
+            $coordarray[0] = floatval($coordarray[0]);
+            $coordarray[1] = floatval($coordarray[1]);
+
+            //invert the coor? maybe that ll solved it
+            $temp = $coordarray[0];
+            $coordarray[0] = $coordarray[1];
+            $coordarray[1] = $temp;
+
+
+            if($dataobject['features'][$index]['geometry']['coordinates'] == NULL){
+                $dataobject['features'][$index]['geometry']['coordinates'] = $coordarray;
+            }
+            
+            // var_dump($dataobject['features'][$index]);
+        }
+
+        return $dataobject;
+    }
+
 
 	/*********************************************** Public API **********************************/
 
@@ -573,12 +694,42 @@ class myBettyConnector {
         //var_dump($this->createInsertStatement());
         //var_dump($this->createUpdateStatement());
 
-        echo $this->writeBatch($testInsert);
+        echo $this->getAllData();
 	}
 
+    public function load($fillIn = FALSE){
+        $load = array();
+        $load['meta'] = $this->metadata;
+        $everything = $this->getAllData();
+        if($fillIn){
+            $everything = $this->fillInCoordinates($everything);
+        } 
 
+        //debug statement
+        //var_dump($everything);
 
+        $load['data'] = $everything;
 
+        return $load;
+    }
+
+    public function sync($req){
+
+        $reply = array();
+
+        $errorString = "";
+        $errorString = $this->writeBatch($req['writes']);
+        if($errorString != ""){
+            $reply['errors'] = "The following problem occurred: ".$errorString.". The database was unchanged. retry?";
+            $reply['data'] = NULL;
+            return json_encode($reply);
+        }
+        else{
+            $reply['data'] = $this->load();
+            $reply['errors'] = FALSE;
+            return json_encode($reply);
+        }
+    }
 }
 ?>
 

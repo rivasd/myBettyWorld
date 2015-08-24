@@ -22,7 +22,7 @@
         <!--FileSaver.js to allow download from client-side only-->
         <script src="FileSaverJS/FileSaver.js"></script>
 
-
+        <script src="scripts/BettyServerInterface.js"></script>
         <script src="scripts/UserControls.js"></script>
         <script src="scripts/FeatureEditor.js"></script>
 		<script src="scripts/global.js"></script>
@@ -168,8 +168,8 @@
 			<footer>
                 <ul class="navbar" id="lownavbar">
                     <li><a id="saveCopy"><i class="fa fa-download vertical-center"></i></a></li>
-                    <li><a><i class="fa fa-floppy-o vertical-center"></i></i></a></li>
-                    <li><a><i class="fa fa-sign-out vertical-center"></i></a></li>
+                    <li><a id="sync"><i class="fa fa-floppy-o vertical-center"></i></a></li>
+                    <li><a id="touchedAll"><i class="fa fa-sign-out vertical-center"></i></a></li>
                 </ul>
 			</footer>
 		</div>

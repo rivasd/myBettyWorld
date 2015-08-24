@@ -33,30 +33,62 @@ function FeatureEditor(opts){
     //a recycle bin ol.collection  that will hold deleted ol.features. this object should allow for permanent deleting or restoring
     var recycleBin = new ol.Collection();
 
-    //A collection of HTML tables that are bound to the collection.
+    //the server link object allowing for communication with the database
+    var serverLink = opts.server
 
 
     //the layer that will hold everything we draw
     var workingLayer = opts.workingLayer || new ol.layer.Vector({
         source: new ol.source.Vector({
-        	features: allFeatures
+            features: allFeatures
         }),
-        title: "workingLayer",
-        style: new ol.style.Style({
-            fill: new ol.style.Fill({
-              color: 'rgba(255, 255, 255, 0.2)'
-            }),
-            stroke: new ol.style.Stroke({
-              color: '#ffcc33',
-              width: 2
-            }),
-            image: new ol.style.Circle({
-              radius: 7,
-              fill: new ol.style.Fill({
-                color: '#ffcc33'
-              })
-            })
-          })
+        title: "workingLayer" ,
+        style:  function (feat, res) {
+            var styleArray = [];
+            var strokeColor = [];
+            if (feat.get('isNew')) {
+                strokeColor = [214, 36, 20, 1];
+            }
+            else {
+                strokeColor = [235, 235, 235, 1];
+            }
+
+
+            var base = new ol.style.Style({
+                image: new ol.style.Circle({
+                    fill: new ol.style.Fill({
+                        color: [255, 204, 51, 1]
+                    }),
+                    stroke: new ol.style.Stroke({
+                        color: strokeColor,
+                        width: 3
+                    }),
+                    radius: 7
+                })
+            });
+
+            styleArray.push(base);
+
+            var changedTextStyle = new ol.style.Style({
+                text: new ol.style.Text({
+                    text: "C",
+                    fill: new ol.style.Fill({
+                        color: [0, 0, 0, 1]
+                    }),
+                    stroke: new ol.style.Stroke({
+                        width: 2,
+                        color: [255, 255, 255, 1]
+                    })
+                })
+            });
+
+            if (feat.get("touched")) {
+                styleArray.push(changedTextStyle);
+            }
+
+            return styleArray;
+        }
+       
     });
 
     //The ol.source that holds what we will draw
@@ -226,15 +258,13 @@ function FeatureEditor(opts){
     		if (meta.hasOwnProperty(fieldName) && !meta[fieldName].invisible) {
     			var initVal;
 
-    			if (meta[fieldName].values.length > 1) {
+    			if (Array.isArray(meta[fieldName].values)) {
     				initVal = [];
     			}
-    			else if (meta[fieldName].values.length === 1) {
+    			else{
     				initVal = "";
     			}
-    			else {
-    				throw "bad meta object, check source for comments";
-    			}
+
 
     			feat.set(fieldName, initVal);
     		}
@@ -309,18 +339,25 @@ function FeatureEditor(opts){
     	    if (meta.hasOwnProperty(fieldName)) {
     	        var $input = $(elem);
     	        var valToWrite = $input.val(); //may return an array if this is a <select> element
+    	        if (meta[fieldName].type == "int" || meta[fieldName].type == "float") {
+    	            if (valToWrite !== "") {
+    	                valToWrite = parseInt(valToWrite, 10);
+    	            }
+    	        }
+
+
     	        var isText = (elem.type == "text" || elem.tagName == "TEXTAREA");
 
     	        //we will assume that Open Layers 3 lets us store arrays as ol.Object custom properties...
     	        //A couple of safety checks...
 
     	        if (typeof valToWrite === "string" || typeof valToWrite === "number") {
-    	            if (meta[fieldName].values.length !== 1 && elem.type == "text") {
+    	            if (Array.isArray(meta[fieldName].values) && elem.type == "text") {
     	                throw "this fields expects an array of chosen values, tried to saved a string";
     	            }
     	        }
     	        else if (typeof valToWrite === "object") {
-    	            if (meta[fieldName].values.length === 1) {
+    	            if (!Array.isArray(meta[fieldName].values.length)) {
     	                throw "this field expects a single string as a free value, tried to write an array instead";
     	            }
     	        }
@@ -329,7 +366,7 @@ function FeatureEditor(opts){
     	        }
 
     	        //we are now ready to write the data
-    	        if (feat.get(fieldName) == undefined) {
+    	        if (feat.get(fieldName) === undefined) {
     	            throw "You are trying to save a field that this feat did not already have set. this is a no-no";
     	        }
 
@@ -388,14 +425,14 @@ function FeatureEditor(opts){
 
 		//start by iterating through the ownProperties of the meta-data object and identify visible ones
 		for(fieldName in meta){
-			if(meta.hasOwnProperty(fieldName) && !meta[fieldName].invisible){
+			if(meta.hasOwnProperty(fieldName) && !meta[fieldName].invisible && fieldName != "timestamp"){
 				//"fieldName" should be retrievable from the feat object, if not then the client database was not properly initialized
 				var rawValue = feat.get(fieldName);
 
 				/* WE WILL ALLOW ABSENT VALUES FOR NOW FOR THE SAKE OF TESTING */
 				/* CHANGE THIS FOR SERVER-SIDE DEBUGGING */
 				if(rawValue == undefined){
-					rawValue = "missing!";
+					//rawValue = "missing!";
 				}
 				/* COMMENT OUT THE ABOVE CODE FOR SERVER-SIDE TESTING*/
 
@@ -404,49 +441,61 @@ function FeatureEditor(opts){
 				//first, we will assume the values have been stored properly by the above function (and the server sync of course!)
 				//If the rawValue is a string, we will assume we are looking for <input type="text">
 				//If it is of type object (and by this I mean it is an array), then we are looking for either <select> or [type=radio] / [type=checkbox]
-				if(typeof rawValue == "string"){
-					target = $interface.find("input[name='" + fieldName.replace(/\s+/g, "-") + "'].accepts-data");
-					if(target.length == 0){
-						throw "could not find the editable input[type=text] element with name=" + fieldName;
-					}
-					target.val(rawValue);
+				if (!meta[fieldName].map) {
+				    if (typeof rawValue == "string" || typeof rawValue == "number" || rawValue == null) {
+				        target = $interface.find("input[name='" + fieldName.replace(/\s+/g, "-") + "'].accepts-data");
+				        if (target.length == 0) {
+				            throw "could not find the editable input[type=text] element with name=" + fieldName;
+				        }
+				        target.val(rawValue);
+				    }
+                    else{
+                        throw "hum looks like you are writing a free-write field to a choice-constrained one";
+                    }
 				}
-				else if(typeof rawValue == "object"){
-					var intermediate = $(".accepts-data").filter("[name="+ fieldName.replace(/\s+/g, "-") +"]");
-					//did we get multiple hits with this previous search? then we got a group of radio or checkbox
-					if(intermediate.length > 1){
-						// are all of those <input> elements of the same type? they should be...
-						var ok = true;
-						var type = intermediate.first().attr("type");
-						intermediate.each(function (idx, elem) {
-							if (elem.tagName != "INPUT") {
-								ok = false;
-							}
-							if (elem.type != type) {
-								ok = false;
-							}
-						});
+				else if (typeof rawValue == "object") {
+				    var intermediate = $(".accepts-data").filter("[name=" + fieldName.replace(/\s+/g, "-") + "]");
+				    //did we get multiple hits with this previous search? then we got a group of radio or checkbox
 
-						if(!ok){
-							throw "wow, recheck your UI because names are being misused";
-						}
-						else{
-							// ok we are safe to write, pull the single element from the rawValue array. it is
-							intermediate.val(rawValue);
-						}
-					}
-					else{
-						//single hit, this has to be <select> element
-						if(intermediate.prop("tagName") != "SELECT"){
-							throw "Found a single input element when trying to write a multiple-choice data. It was not a <select>. You f*cked up son.";
-						}
-						target = intermediate;
-						//if, as it should be, we pulled an actual array from the ol.feat, we should be clear to use the val() jQuery method to finally write the data
-						target.val(rawValue);
-					}
+				    //SUPPORT FOR MULTIPLE DISCRETE VALUES COULD GO HERE
+				    if (Array.isArray(rawValue) && rawValue.length == 1) {
+				        rawValue = rawValue[0];
+				    }
+
+
+				    if (intermediate.length > 1) {
+				        // are all of those <input> elements of the same type? they should be...
+				        var ok = true;
+				        var type = intermediate.first().attr("type");
+				        intermediate.each(function (idx, elem) {
+				            if (elem.tagName != "INPUT") {
+				                ok = false;
+				            }
+				            if (elem.type != type) {
+				                ok = false;
+				            }
+				        });
+
+				        if (!ok) {
+				            throw "wow, recheck your UI because names are being misused";
+				        }
+				        else {
+				            // ok we are safe to write, pull the single element from the rawValue array. it is
+				            intermediate.val(rawValue);
+				        }
+				    }
+				    else {
+				        //single hit, this has to be <select> element
+				        if (intermediate.prop("tagName") != "SELECT") {
+				            throw "Found a single input element when trying to write a multiple-choice data. It was not a <select>. You f*cked up son.";
+				        }
+				        target = intermediate;
+				        //if, as it should be, we pulled an actual array from the ol.feat, we should be clear to use the val() jQuery method to finally write the data
+				        target.val(rawValue);
+				    }
 				}
-				else{
-					throw "hum a weird type was stored inside this ol.feature, maybe a number?";
+				else {
+				    throw "hum a weird type was stored inside this ol.feature, maybe a number?";
 				}
 			}
 		}
@@ -474,6 +523,11 @@ function FeatureEditor(opts){
             selectedFeats.clear();
             viewer.showInstructs();
         }
+    }
+
+
+    function convertBatchToEPSG(code){
+        
     }
 
     /***************************** placing data  ********************************************/
@@ -531,6 +585,7 @@ function FeatureEditor(opts){
         }
         //start listening for delete keypresses and delete accordingly
         $(document).on("keydown", startDelete);
+        //viewer.showInputs();
     }
 
     editor.stopEditing = function stopEditing() {
@@ -539,6 +594,7 @@ function FeatureEditor(opts){
         if (selectInteraction.getFeatures().getLength() == 1) {
             var featToSave = selectInteraction.getFeatures().item(0);
             writeData(featToSave, $("#edit"));
+            viewer.showInstruct();
         }
 
         mode = "off";
@@ -550,6 +606,7 @@ function FeatureEditor(opts){
         selectInteraction.getFeatures().clear();
         //stop deleting features on "delete" keypresses
         $(document).off("keydown", startDelete);
+
     }
 
     editor.read = displayData;
@@ -576,7 +633,59 @@ function FeatureEditor(opts){
     }
 
     editor.getDatabase = function () {
-    	return allFeatures();
+    	return allFeatures;
+    }
+
+    editor.getRecycleBin = function () {
+        return recycleBin;
+    }
+
+    editor.getUpdatesArray = function () {
+        var news = [];
+        allFeatures.forEach(function (elem) {
+            if (elem.get('isNew') == true || elem.get('touched') == true) {
+                news.push(elem);
+            }
+        });
+
+        return news;
+    }
+
+    editor.updateDatabase = function ($fulldata){
+        
+    }
+
+    editor.markAllTouched = function(){
+         allFeatures.forEach(function(elem){
+             elem.set('touched', true);
+         })
+    }
+
+    editor.sync = function (callback) {
+        //this.stopEditing();
+        viewer.closeEdit();
+        refinedCallback = function (newstuff, errors) {
+            //code to update with the new data
+            if (newstuff != null) {
+                mainSource.clear()
+                mainSource.addFeatures(newstuff.data.getArray());
+                allFeatures = newstuff.data;
+                allFeatures.forEach(function (elem) {
+                    elem.set('isNew', false);
+                    elem.set('touched', false);
+                });
+            }
+
+
+            //finally do the user requested stuff
+            callback(errors);
+        }
+
+
+        serverLink.sync(this.getUpdatesArray(), recycleBin, refinedCallback);
+
+
+
     }
 
     return editor;
